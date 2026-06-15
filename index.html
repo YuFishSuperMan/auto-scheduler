@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能自動排班系統 (勞基法與特殊規則版)</title>
+    <title>智能自動排班系統 (指定班底資格版)</title>
     <script src="https://tailwindcss.com"></script>
     <script src="https://jsdelivr.net"></script>
 </head>
@@ -11,76 +11,68 @@
 
     <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-6">
         <header class="border-b pb-4 mb-6">
-            <h1 class="text-2xl font-bold text-slate-800">📅 智能自動排班系統</h1>
-            <p class="text-sm text-slate-500 mt-1">內建勞基法規範（一例一休、11小時輪班間隔、連上上限5天）及正兼職彈性設定</p>
+            <h1 class="text-2xl font-bold text-slate-800">📅 智能自動排班系統 (專屬班底資格版)</h1>
+            <p class="text-sm text-slate-500 mt-1">先指定員工的可值班別名單，系統會嚴格由該班別限定的人員中抽選排班，並符合勞基法規範。</p>
         </header>
 
         <!-- 設定區域 -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <!-- 1. 人員管理 -->
-            <div class="bg-slate-50 p-4 rounded-lg border">
-                <label class="block font-semibold text-slate-700 mb-2">👥 員工名單與職等設定</label>
-                <p class="text-xs text-slate-400 mb-2">格式：姓名,正職/兼職,必定休假日期(用斜線隔開，如 5/12/25)</p>
-                <textarea id="employeeInput" class="w-full border rounded p-2 text-sm h-48 focus:ring-2 focus:ring-blue-500 focus:outline-none">員工A,正職,5/12
-員工B,正職,3/15
-員工C,兼職,7/8/20
-員工D,正職,
-員工E,兼職,1/2
-員工F,正職,
-員工G,正職,22
-員工H,兼職,
-員工I,正職,</textarea>
+            <!-- 1. 人員與班底設定 -->
+            <div class="bg-slate-50 p-4 rounded-lg border lg:col-span-2">
+                <label class="block font-semibold text-slate-700 mb-1">👥 員工名單與班別專屬資格設定</label>
+                <p class="text-xs text-slate-400 mb-2">
+                    格式：姓名,正職/兼職,可值班別(用+號隔開),必定休假日期(用/隔開)<br>
+                    <span class="text-indigo-600 font-medium">※ 班別代碼必須為：白班D、支援班、晚班E、大夜班（不寫代表全班別都可以上）</span>
+                </p>
+                <textarea id="employeeInput" class="w-full border rounded p-2 text-sm h-52 font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none">員工A,正職,白班D+支援班,5/12
+員工B,正職,白班D+晚班E,3/15
+員工C,兼職,大夜班,7/8/20
+員工D,正職,白班D+支援班+晚班E+大夜班,
+員工E,兼職,支援班+晚班E,1/2
+員工F,正職,大夜班,
+員工G,正職,白班D+晚班E,22
+員工H,兼職,支援班+晚班E,
+員工I,正職,白班D+支援班,</textarea>
             </div>
             
-            <!-- 2. 月份與天數 -->
+            <!-- 2. 各班每日人數與月份設定 -->
             <div class="bg-slate-50 p-4 rounded-lg border flex flex-col justify-between">
                 <div>
                     <label class="block font-semibold text-slate-700 mb-2">📅 選擇排班月份</label>
                     <input id="monthInput" type="month" class="w-full border rounded p-2 text-sm bg-white focus:ring-2 focus:ring-blue-500" value="2026-06">
                 </div>
-                <div class="mt-4 flex-1">
-                    <label class="block font-semibold text-slate-700 mb-2">⚙️ 四大固定班別時間參考</label>
-                    <ul class="text-xs text-slate-500 space-y-1 bg-white p-2 border rounded">
-                        <li>☀️ 白班 D (08:00 ~ 16:00)</li>
-                        <li>🤝 支援班 (13:00 ~ 21:00)</li>
-                        <li>🌙 晚班 E (16:00 ~ 24:00)</li>
-                        <li>🦇 大夜班 (00:00 ~ 08:00)</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- 3. 各班每日人數設定 -->
-            <div class="bg-slate-50 p-4 rounded-lg border">
-                <label class="block font-semibold text-slate-700 mb-2">🎯 每日各班別需滿足人數</label>
-                <div class="space-y-3 mt-2">
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium">白班 D 人數：</span>
-                        <input id="numD" type="number" class="w-20 border rounded p-1 text-center text-sm" value="2">
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium">支援班 人數：</span>
-                        <input id="numSup" type="number" class="w-20 border rounded p-1 text-center text-sm" value="1">
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium">晚班 E 人數：</span>
-                        <input id="numE" type="number" class="w-20 border rounded p-1 text-center text-sm" value="1">
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium">大夜班 人數：</span>
-                        <input id="numN" type="number" class="w-20 border rounded p-1 text-center text-sm" value="1">
+                
+                <div class="mt-4">
+                    <label class="block font-semibold text-slate-700 mb-1">🎯 每日各班別需滿足人數</label>
+                    <div class="space-y-2 bg-white p-3 border rounded">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-medium text-slate-600">☀️ 白班 D：</span>
+                            <input id="numD" type="number" class="w-16 border rounded p-1 text-center" value="2">
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-medium text-slate-600">🤝 支援班：</span>
+                            <input id="numSup" type="number" class="w-16 border rounded p-1 text-center" value="1">
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-medium text-slate-600">🌙 晚班 E：</span>
+                            <input id="numE" type="number" class="w-16 border rounded p-1 text-center" value="1">
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-medium text-slate-600">🦇 大夜班：</span>
+                            <input id="numN" type="number" class="w-16 border rounded p-1 text-center" value="1">
+                        </div>
                     </div>
                 </div>
-                <p class="text-xs text-red-500 mt-4">⚠️ 註：請確保總人數大於每日所需總人頭，否則會出現無人可排。</p>
             </div>
         </div>
 
         <!-- 操控按鈕 -->
         <div class="flex gap-4 mb-6">
             <button onclick="generateSchedule()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow">
-                ⚡ 開始符合法規自動排班
+                ⚡ 開始符合限定班底自動排班
             </button>
             <button onclick="downloadExcel()" id="exportBtn" disabled class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg transition-colors shadow">
-                📥 匯出符合法規 Excel 檔 (.xlsx)
+                📥 匯出 Excel 檔 (.xlsx)
             </button>
         </div>
 
@@ -109,8 +101,15 @@
                 const parts = line.split(',');
                 const name = parts[0] ? parts[0].trim() : '未命名';
                 const type = parts[1] ? parts[1].trim() : '正職';
-                const offDays = parts[2] ? parts[2].split('/').map(n => parseInt(n.trim())).filter(n => !isNaN(n)) : [];
-                return { name, type, offDays };
+                
+                // 解析允許值班的班底資格（如果沒寫代表四個班都可以上）
+                let allowedShifts = shiftKeys;
+                if (parts[2] && parts[2].trim() !== "") {
+                    allowedShifts = parts[2].split('+').map(s => s.trim()).filter(Boolean);
+                }
+                
+                const offDays = parts[3] ? parts[3].split('/').map(n => parseInt(n.trim())).filter(n => !isNaN(n)) : [];
+                return { name, type, allowedShifts, offDays };
             });
         }
 
@@ -155,53 +154,50 @@
                 scheduleMatrix[e.name] = {
                     name: e.name,
                     type: e.type,
-                    days: {}, // 每一天排什麼班
-                    consecutiveWork: 0, // 連續上班天數
-                    weeklyWorkCount: {}, // 週度計數，用來檢查一例一休
+                    days: {}, 
+                    consecutiveWork: 0, 
                     stats: { '白班D': 0, '支援班': 0, '晚班E': 0, '大夜班': 0, '休假': 0 }
                 };
             });
 
             // 演算法核心：每日逐班過濾法
             for (let d = 1; d <= totalDays; d++) {
-                // 計算當天屬於哪一週 (以7天為一週期分配例休)
-                let weekIdx = Math.floor((d - 1) / 7);
                 let todayAssigned = new Set();
 
                 requiredShifts.forEach(shiftObj => {
                     for (let c = 0; c < shiftObj.count; c++) {
                         
-                        // 篩選出今天「合法」可以上這個班的人
+                        // 篩選出今天「符合該班別班底資格」且「合法」可以上的人
                         let availablePool = emps.filter(e => {
                             let m = scheduleMatrix[e.name];
                             
-                            // 1. 今天還沒被排班
-                            if (todayAssigned.has(e.name)) return false;
+                            // 關鍵新增條件：必須屬於該班別的名單班底成員
+                            if (!e.allowedShifts.includes(shiftObj.key)) return false;
                             
-                            // 2. 規則3：必定休假日排除
-                            if (e.offDays.includes(d)) return false;
+                            // 原有法規與設定限制：
+                            if (todayAssigned.has(e.name)) return false; // 今天已排過班
+                            if (e.offDays.includes(d)) return false;     // 必定休假日排除
+                            if (m.consecutiveWork >= 5) return false;    // 不能連續上班超過5天
                             
-                            // 3. 規則5：不能連續上班超過 5 天
-                            if (m.consecutiveWork >= 5) return false;
-                            
-                            // 4. 規則6（勞基法）：兩班間隔至少 11 小時
-                            // 昨天如果值大夜班 (0-8)，今天不管上什麼都可以。
-                            // 但昨天如果值晚班E (16-24) 或支援班 (13-21)，今天絕對不能接白班D (8:00) 或大夜班 (0:00)。
+                            // 勞基法輪班間隔11小時限制
                             if (d > 1) {
                                 let lastDayShift = m.days[d - 1];
                                 if (lastDayShift === '晚班E' && (shiftObj.key === '白班D' || shiftObj.key === '大夜班' || shiftObj.key === '支援班')) return false;
                                 if (lastDayShift === '支援班' && (shiftObj.key === '大夜班' || shiftObj.key === '白班D')) return false;
-                                if (lastDayShift === '大夜班' && shiftObj.key === '大夜班') return false; // 大夜不連大夜避免過勞
+                                if (lastDayShift === '大夜班' && shiftObj.key === '大夜班') return false; 
                             }
 
                             return true;
                         });
 
                         if (availablePool.length > 0) {
-                            // 依據總班數公平性進行排序
+                            // 依照該班別已排次數由少到多排序，確保班底內公平分攤
                             availablePool.sort((a, b) => {
                                 let countA = scheduleMatrix[a.name].stats[shiftObj.key];
                                 let countB = scheduleMatrix[b.name].stats[shiftObj.key];
                                 return (countA - countB) + (Math.random() - 0.5) * 0.1;
                             });
 
+                            let chosen = availablePool[0].name;
+                            scheduleMatrix[chosen].days[d] = shiftObj.key;
+                            scheduleMatrix[chosen].stats[shiftObj.key]++;
