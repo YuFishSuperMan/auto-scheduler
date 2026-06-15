@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能自動排班系統 (指定班底資格版)</title>
+    <title>智能自動排班系統 (下拉勾選版)</title>
     <script src="https://tailwindcss.com"></script>
     <script src="https://jsdelivr.net"></script>
 </head>
@@ -11,68 +11,90 @@
 
     <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-6">
         <header class="border-b pb-4 mb-6">
-            <h1 class="text-2xl font-bold text-slate-800">📅 智能自動排班系統 (專屬班底資格版)</h1>
-            <p class="text-sm text-slate-500 mt-1">先指定員工的可值班別名單，系統會嚴格由該班別限定的人員中抽選排班，並符合勞基法規範。</p>
+            <h1 class="text-2xl font-bold text-slate-800">📅 智能自動排班系統 (圖形化設定版)</h1>
+            <p class="text-sm text-slate-500 mt-1">選取人員 ➔ 下拉職級 ➔ 勾選班別與休假 ➔ 加入當月名單 ➔ 觸發法規自動排班</p>
         </header>
 
-        <!-- 設定區域 -->
+        <!-- 設定與控制區 -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <!-- 1. 人員與班底設定 -->
+            
+            <!-- 1. 人員設定表單 -->
             <div class="bg-slate-50 p-4 rounded-lg border lg:col-span-2">
-                <label class="block font-semibold text-slate-700 mb-1">👥 員工名單與班別專屬資格設定</label>
-                <p class="text-xs text-slate-400 mb-2">
-                    格式：姓名,正職/兼職,可值班別(用+號隔開),必定休假日期(用/隔開)<br>
-                    <span class="text-indigo-600 font-medium">※ 班別代碼必須為：白班D、支援班、晚班E、大夜班（不寫代表全班別都可以上）</span>
-                </p>
-                <textarea id="employeeInput" class="w-full border rounded p-2 text-sm h-52 font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none">員工A,正職,白班D+支援班,5/12
-員工B,正職,白班D+晚班E,3/15
-員工C,兼職,大夜班,7/8/20
-員工D,正職,白班D+支援班+晚班E+大夜班,
-員工E,兼職,支援班+晚班E,1/2
-員工F,正職,大夜班,
-員工G,正職,白班D+晚班E,22
-員工H,兼職,支援班+晚班E,
-員工I,正職,白班D+支援班,</textarea>
+                <h3 class="font-bold text-slate-700 mb-3 flex items-center">➕ 步驟一：設定人員特殊條件並加入</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">選擇員工名稱</label>
+                        <select id="selectName" class="w-full border rounded p-2 text-sm bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">職級分類</label>
+                        <select id="selectType" class="w-full border rounded p-2 text-sm bg-white">
+                            <option value="正職">正職</option>
+                            <option value="兼職">兼職</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">可值班底資格 (可多選，不勾代表全選)</label>
+                    <div class="flex flex-wrap gap-4 bg-white p-2 border rounded text-sm">
+                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="shift-check" value="白班D"> ☀️ 白班D</label>
+                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="shift-check" value="支援班"> 🤝 支援班</label>
+                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="shift-check" value="晚班E"> 🌙 晚班E</label>
+                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="shift-check" value="大夜班"> 🦇 大夜班</label>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">必定休假日期 (可複選)</label>
+                    <div id="dateCheckboxContainer" class="grid grid-cols-7 gap-1 bg-white p-2 border rounded text-xs max-h-24 overflow-y-auto">
+                        <!-- 由 JavaScript 根據月份動態生成日期勾選鈕 -->
+                    </div>
+                </div>
+
+                <button onclick="addEmployeeToList()" class="mt-4 w-full bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded text-sm transition-colors">
+                    📥 將此條件員工加入當月排班名單
+                </button>
             </div>
             
-            <!-- 2. 各班每日人數與月份設定 -->
+            <!-- 2. 月份與各班人數設定 -->
             <div class="bg-slate-50 p-4 rounded-lg border flex flex-col justify-between">
                 <div>
                     <label class="block font-semibold text-slate-700 mb-2">📅 選擇排班月份</label>
-                    <input id="monthInput" type="month" class="w-full border rounded p-2 text-sm bg-white focus:ring-2 focus:ring-blue-500" value="2026-06">
+                    <input id="monthInput" type="month" class="w-full border rounded p-2 text-sm bg-white focus:ring-2 focus:ring-blue-500" value="2026-06" onchange="updateDateCheckboxes()">
                 </div>
                 
                 <div class="mt-4">
                     <label class="block font-semibold text-slate-700 mb-1">🎯 每日各班別需滿足人數</label>
                     <div class="space-y-2 bg-white p-3 border rounded">
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="font-medium text-slate-600">☀️ 白班 D：</span>
-                            <input id="numD" type="number" class="w-16 border rounded p-1 text-center" value="2">
-                        </div>
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="font-medium text-slate-600">🤝 支援班：</span>
-                            <input id="numSup" type="number" class="w-16 border rounded p-1 text-center" value="1">
-                        </div>
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="font-medium text-slate-600">🌙 晚班 E：</span>
-                            <input id="numE" type="number" class="w-16 border rounded p-1 text-center" value="1">
-                        </div>
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="font-medium text-slate-600">🦇 大夜班：</span>
-                            <input id="numN" type="number" class="w-16 border rounded p-1 text-center" value="1">
-                        </div>
+                        <div class="flex justify-between items-center text-xs"><span>☀️ 白班 D：</span><input id="numD" type="number" class="w-16 border rounded p-1 text-center" value="2"></div>
+                        <div class="flex justify-between items-center text-xs"><span>🤝 支援班：</span><input id="numSup" type="number" class="w-16 border rounded p-1 text-center" value="1"></div>
+                        <div class="flex justify-between items-center text-xs"><span>🌙 晚班 E：</span><input id="numE" type="number" class="w-16 border rounded p-1 text-center" value="1"></div>
+                        <div class="flex justify-between items-center text-xs"><span>🦇 大夜班：</span><input id="numN" type="number" class="w-16 border rounded p-1 text-center" value="1"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 操控按鈕 -->
+        <!-- 當月已加入名單看板 -->
+        <div class="bg-indigo-50/50 p-4 rounded-lg border mb-6">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="font-bold text-indigo-900 text-sm">📋 步驟二：確認當月人員名單 (目前已加入: <span id="listCount" class="text-indigo-600">0</span> 人)</h3>
+                <button onclick="addAllDefaultEmployees()" class="text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700">⚡ 一鍵加入全體19人(預設正職/全資格)</button>
+            </div>
+            <div id="addedEmployeesContainer" class="flex flex-wrap gap-2 text-xs">
+                <span class="text-slate-400">目前暫無人員，請在上表選取加入，或點擊一鍵加入全體。</span>
+            </div>
+        </div>
+
+        <!-- 操控動作按鈕 -->
         <div class="flex gap-4 mb-6">
             <button onclick="generateSchedule()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow">
-                ⚡ 開始符合限定班底自動排班
+                ⚡ 步驟三：開始自動排班
             </button>
             <button onclick="downloadExcel()" id="exportBtn" disabled class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg transition-colors shadow">
-                📥 匯出 Excel 檔 (.xlsx)
+                📥 匯出 交叉統計 Excel 檔 (.xlsx)
             </button>
         </div>
 
@@ -91,113 +113,80 @@
     </div>
 
     <script>
+        // 預設19人名單
+        const defaultNames = ["馬家恩", "徐琬玲", "蔡毓暄", "高崇恩", "洪瑞國", "李幸容", "陳純瑜", "蕭雅文", "鄭力誠", "陳品蓁", "謝采蓉", "陳昱臻", "游惟婷", "曾浩恩", "洪宜婷", "林雨臻", "張毓芳", "丁柔安", "吳柏萱"];
+        let currentMonthEmployees = []; // 實際參與排班的名單陣列
         let excelRows = [];
         let datesArray = [];
         const shiftKeys = ['白班D', '支援班', '晚班E', '大夜班'];
 
-        function parseEmployees() {
-            const lines = document.getElementById('employeeInput').value.split('\n').filter(Boolean);
-            return lines.map(line => {
-                const parts = line.split(',');
-                const name = parts[0] ? parts[0].trim() : '未命名';
-                const type = parts[1] ? parts[1].trim() : '正職';
-                
-                // 解析允許值班的班底資格（如果沒寫代表四個班都可以上）
-                let allowedShifts = shiftKeys;
-                if (parts[2] && parts[2].trim() !== "") {
-                    allowedShifts = parts[2].split('+').map(s => s.trim()).filter(Boolean);
-                }
-                
-                const offDays = parts[3] ? parts[3].split('/').map(n => parseInt(n.trim())).filter(n => !isNaN(n)) : [];
-                return { name, type, allowedShifts, offDays };
+        // 初始化
+        window.onload = function() {
+            const select = document.getElementById('selectName');
+            defaultNames.forEach(name => {
+                let opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                select.appendChild(opt);
             });
-        }
+            updateDateCheckboxes();
+        };
 
-        function getDaysInMonth(year, month) {
-            return new Date(year, month, 0).getDate();
-        }
-
-        function generateSchedule() {
-            const emps = parseEmployees();
+        // 根據選擇的月份，動態更新必定休假的日期勾選方塊
+        function updateDateCheckboxes() {
+            const container = document.getElementById('dateCheckboxContainer');
+            container.innerHTML = '';
             const monthVal = document.getElementById('monthInput').value;
+            if (!monthVal) return;
             
-            const reqD = parseInt(document.getElementById('numD').value) || 0;
-            const reqSup = parseInt(document.getElementById('numSup').value) || 0;
-            const reqE = parseInt(document.getElementById('numE').value) || 0;
-            const reqN = parseInt(document.getElementById('numN').value) || 0;
+            const [year, month] = monthVal.split('-').map(Number);
+            const totalDays = new Date(year, month, 0).getDate();
             
-            const requiredShifts = [
-                { key: '白班D', count: reqD },
-                { key: '支援班', count: reqSup },
-                { key: '晚班E', count: reqE },
-                { key: '大夜班', count: reqN }
-            ];
+            for(let d = 1; d <= totalDays; d++) {
+                let lbl = document.createElement('label');
+                lbl.className = "flex items-center gap-0.5 border p-0.5 bg-slate-50 rounded cursor-pointer hover:bg-slate-100";
+                lbl.innerHTML = `<input type="checkbox" class="day-off-check" value="${d}"> ${d}日`;
+                container.appendChild(lbl);
+            }
+        }
 
-            if (emps.length === 0 || !monthVal) {
-                alert("請填寫員工名單並選擇月份！");
+        // 圖形化：加入單一員工
+        function addEmployeeToList() {
+            const name = document.getElementById('selectName').value;
+            const type = document.getElementById('selectType').value;
+            
+            // 收集勾選的班別
+            let allowedShifts = [];
+            document.querySelectorAll('.shift-check:checked').forEach(cb => allowedShifts.push(cb.value));
+            if(allowedShifts.length === 0) allowedShifts = [...shiftKeys]; // 沒勾代表都可以上
+
+            // 收集勾選的休假
+            let offDays = [];
+            document.querySelectorAll('.day-off-check:checked').forEach(cb => offDays.push(parseInt(cb.value)));
+
+            // 檢查是否重複加入
+            if(currentMonthEmployees.some(e => e.name === name)) {
+                alert(`「${name}」已存在於當月名單中，若要更改條件請先移除後重新加入。`);
                 return;
             }
 
-            const [year, month] = monthVal.split('-').map(Number);
-            const totalDays = getDaysInMonth(year, month);
-            const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+            currentMonthEmployees.push({ name, type, allowedShifts, offDays });
+            renderAddedEmployees();
+        }
 
-            datesArray = [];
-            for (let d = 1; d <= totalDays; d++) {
-                let dateObj = new Date(year, month - 1, d);
-                datesArray.push({ day: d, dayName: weekDays[dateObj.getDay()] });
-            }
-
-            // 初始化每個人每月的排班歷史
-            let scheduleMatrix = {};
-            emps.forEach(e => {
-                scheduleMatrix[e.name] = {
-                    name: e.name,
-                    type: e.type,
-                    days: {}, 
-                    consecutiveWork: 0, 
-                    stats: { '白班D': 0, '支援班': 0, '晚班E': 0, '大夜班': 0, '休假': 0 }
-                };
+        // 一鍵加全體
+        function addAllDefaultEmployees() {
+            defaultNames.forEach(name => {
+                if(!currentMonthEmployees.some(e => e.name === name)) {
+                    currentMonthEmployees.push({
+                        name: name,
+                        type: '正職',
+                        allowedShifts: [...shiftKeys],
+                        offDays: []
+                    });
+                }
             });
+            renderAddedEmployees();
+        }
 
-            // 演算法核心：每日逐班過濾法
-            for (let d = 1; d <= totalDays; d++) {
-                let todayAssigned = new Set();
-
-                requiredShifts.forEach(shiftObj => {
-                    for (let c = 0; c < shiftObj.count; c++) {
-                        
-                        // 篩選出今天「符合該班別班底資格」且「合法」可以上的人
-                        let availablePool = emps.filter(e => {
-                            let m = scheduleMatrix[e.name];
-                            
-                            // 關鍵新增條件：必須屬於該班別的名單班底成員
-                            if (!e.allowedShifts.includes(shiftObj.key)) return false;
-                            
-                            // 原有法規與設定限制：
-                            if (todayAssigned.has(e.name)) return false; // 今天已排過班
-                            if (e.offDays.includes(d)) return false;     // 必定休假日排除
-                            if (m.consecutiveWork >= 5) return false;    // 不能連續上班超過5天
-                            
-                            // 勞基法輪班間隔11小時限制
-                            if (d > 1) {
-                                let lastDayShift = m.days[d - 1];
-                                if (lastDayShift === '晚班E' && (shiftObj.key === '白班D' || shiftObj.key === '大夜班' || shiftObj.key === '支援班')) return false;
-                                if (lastDayShift === '支援班' && (shiftObj.key === '大夜班' || shiftObj.key === '白班D')) return false;
-                                if (lastDayShift === '大夜班' && shiftObj.key === '大夜班') return false; 
-                            }
-
-                            return true;
-                        });
-
-                        if (availablePool.length > 0) {
-                            // 依照該班別已排次數由少到多排序，確保班底內公平分攤
-                            availablePool.sort((a, b) => {
-                                let countA = scheduleMatrix[a.name].stats[shiftObj.key];
-                                let countB = scheduleMatrix[b.name].stats[shiftObj.key];
-                                return (countA - countB) + (Math.random() - 0.5) * 0.1;
-                            });
-
-                            let chosen = availablePool[0].name;
-                            scheduleMatrix[chosen].days[d] = shiftObj.key;
-                            scheduleMatrix[chosen].stats[shiftObj.key]++;
+        // 移除已加入名單中的員工
