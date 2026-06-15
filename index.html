@@ -3,29 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能自動排班系統 (完全修復版)</title>
+    <title>智能自動排班系統 (月份優先版)</title>
     <script src="https://tailwindcss.com"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://sheetjs.com"></script>
 </head>
 <body class="bg-slate-100 min-h-screen p-6 font-sans">
 
     <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-6">
         <header class="border-b pb-4 mb-6">
             <h1 class="text-2xl font-bold text-slate-800">📅 智能自動排班系統</h1>
-            <p class="text-sm text-slate-500 mt-1">選取人員 ➔ 下拉職級 ➔ 勾選班別與休假 ➔ 加入當月名單 ➔ 觸發法規自動排班</p>
+            <p class="text-sm text-slate-500 mt-1">先選月份 ➔ 設定人員特殊條件 ➔ 加入當月名單 ➔ 觸發法規自動排班</p>
         </header>
 
         <!-- 設定與控制區 -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             
-            <!-- 1. 人員設定表單 -->
+            <!-- 1. 人員設定表單 (拉長至左側兩欄) -->
             <div class="bg-slate-50 p-4 rounded-lg border lg:col-span-2">
-                <h3 class="font-bold text-slate-700 mb-3 flex items-center">➕ 步驟一：設定人員特殊條件並加入</h3>
+                <h3 class="font-bold text-slate-700 mb-3 flex items-center">➕ 步驟一：選擇月份並設定人員特殊條件</h3>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- 核心修正：將月份選擇移到最前面，並與姓名、職級並列 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">選擇員工名稱</label>
-                        <!-- 修正：直接在 HTML 中塞入 19 人名單，確保無論如何都不會空白 -->
+                        <label class="block text-xs font-semibold text-indigo-700 mb-1">📅 1. 先選擇排班月份</label>
+                        <input id="monthInput" type="month" class="w-full border-2 border-indigo-200 rounded p-2 text-sm bg-white font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" value="2026-06" onchange="updateDateCheckboxes()">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">2. 選擇員工名稱</label>
                         <select id="selectName" class="w-full border rounded p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="馬家恩">馬家恩</option>
                             <option value="徐琬玲">徐琬玲</option>
@@ -49,7 +53,7 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">職級分類</label>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">3. 職級分類</label>
                         <select id="selectType" class="w-full border rounded p-2 text-sm bg-white">
                             <option value="正職">正職</option>
                             <option value="兼職">兼職</option>
@@ -58,42 +62,43 @@
                 </div>
 
                 <div class="mt-4">
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">可值班底資格 (可多選，不勾代表全選)</label>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">4. 可值班底資格 (可多選，不勾代表全選)</label>
                     <div class="flex flex-wrap gap-4 bg-white p-2 border rounded text-sm">
-                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="shift-check" value="白班D"> ☀️ 白班D</label>
-                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="shift-check" value="支援班"> 🤝 支援班</label>
-                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="shift-check" value="晚班E"> 🌙 晚班E</label>
-                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="shift-check" value="大夜班"> 🦇 大夜班</label>
+                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="shift-check font-bold" value="白班D"> ☀️ 白班D</label>
+                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="shift-check font-bold" value="支援班"> 🤝 支援班</label>
+                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="shift-check font-bold" value="晚班E"> 🌙 晚班E</label>
+                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="shift-check font-bold" value="大夜班"> 🦇 大夜班</label>
                     </div>
                 </div>
 
                 <div class="mt-4">
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">必定休假日期 (可複選)</label>
-                    <div id="dateCheckboxContainer" class="grid grid-cols-7 gap-1 bg-white p-2 border rounded text-xs max-h-24 overflow-y-auto">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">5. 必定休假日期 (根據上方所選月份動態生成)</label>
+                    <div id="dateCheckboxContainer" class="grid grid-cols-7 gap-1 bg-white p-2 border rounded text-xs max-h-36 overflow-y-auto">
                         <!-- 由 JavaScript 根據月份動態生成日期勾選鈕 -->
                     </div>
                 </div>
 
-                <button onclick="addEmployeeToList()" class="mt-4 w-full bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded text-sm transition-colors">
+                <button onclick="addEmployeeToList()" class="mt-4 w-full bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded text-sm transition-colors shadow">
                     📥 將此條件員工加入當月排班名單
                 </button>
             </div>
             
-            <!-- 2. 月份與各班人數設定 -->
+            <!-- 2. 右側：各班每日人數設定與參考 -->
             <div class="bg-slate-50 p-4 rounded-lg border flex flex-col justify-between">
                 <div>
-                    <label class="block font-semibold text-slate-700 mb-2">📅 選擇排班月份</label>
-                    <input id="monthInput" type="month" class="w-full border rounded p-2 text-sm bg-white focus:ring-2 focus:ring-blue-500" value="2026-06" onchange="updateDateCheckboxes()">
-                </div>
-                
-                <div class="mt-4">
-                    <label class="block font-semibold text-slate-700 mb-1">🎯 每日各班別需滿足人數</label>
+                    <h3 class="font-bold text-slate-700 mb-3">🎯 每日各班別需滿足人數</h3>
                     <div class="space-y-2 bg-white p-3 border rounded">
                         <div class="flex justify-between items-center text-xs"><span>☀️ 白班 D：</span><input id="numD" type="number" class="w-16 border rounded p-1 text-center" value="2"></div>
                         <div class="flex justify-between items-center text-xs"><span>🤝 支援班：</span><input id="numSup" type="number" class="w-16 border rounded p-1 text-center" value="1"></div>
                         <div class="flex justify-between items-center text-xs"><span>🌙 晚班 E：</span><input id="numE" type="number" class="w-16 border rounded p-1 text-center" value="1"></div>
                         <div class="flex justify-between items-center text-xs"><span>🦇 大夜班：</span><input id="numN" type="number" class="w-16 border rounded p-1 text-center" value="1"></div>
                     </div>
+                </div>
+                
+                <div class="mt-4 bg-white p-2 border rounded text-[11px] text-slate-400 space-y-1">
+                    <span class="font-bold text-slate-600">💡 班別時間參考：</span>
+                    <div>白班D (8-16) ｜ 支援班 (13-21)</div>
+                    <div>晚班E (16-24) ｜ 大夜班 (0-8)</div>
                 </div>
             </div>
         </div>
@@ -155,19 +160,7 @@
             const totalDays = new Date(year, month, 0).getDate();
             
             for(let d = 1; d <= totalDays; d++) {
-                let lbl = document.createElement('label');
-                lbl.className = "flex items-center gap-0.5 border p-0.5 bg-slate-50 rounded cursor-pointer hover:bg-slate-100";
-                lbl.innerHTML = `<input type="checkbox" class="day-off-check" value="${d}"> ${d}日`;
-                container.appendChild(lbl);
-            }
-        }
-
-        function addEmployeeToList() {
-            const name = document.getElementById('selectName').value;
-            const type = document.getElementById('selectType').value;
-            
-            let allowedShifts = [];
-            document.querySelectorAll('.shift-check:checked').forEach(cb => allowedShifts.push(cb.value));
-            if(allowedShifts.length === 0) allowedShifts = [...shiftKeys]; 
-
-            let offDays = [];
+                let div = document.createElement('div');
+                div.className = "flex items-center gap-1 border p-1 bg-white rounded shadow-sm hover:bg-slate-100";
+                div.innerHTML = `
+                    <input type="checkbox" id="off_day_${d}" class="day-off-check w-4 h-4 text-blue-600 border-gray-300 rounded cursor-pointer" value="${d}">
