@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>19人智能自動排班系統 (支援Excel匯出)</title>
+    <!-- 引入美化介面的 Tailwind CSS -->
+    <script src="https://tailwindcss.com"></script>
+    <!-- 引入匯出 Excel 必備的 SheetJS -->
+    <script src="https://jsdelivr.net"></script>
+</head>
+<body class="bg-slate-100 min-h-screen p-6 font-sans">
+
+    <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-6">
+        <header class="border-b pb-4 mb-6">
+            <h1 class="text-2xl font-bold text-slate-800">📅 19人團隊自動排班系統</h1>
+            <p class="text-sm text-slate-500 mt-1">免伺服器、純瀏覽器運算，點擊直接產出並下載標準 Excel 檔案</p>
+        </header>
+
+        <!-- 設定區域 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-slate-50 p-4 rounded-lg border">
+                <label class="block font-semibold text-slate-700 mb-2">👥 19人名單 (逗號隔開)</label>
+                <textarea id="employeeInput" class="w-full border rounded p-2 text-sm h-32 focus:ring-2 focus:ring-blue-500 focus:outline-none">員工01, 員工02, 員工03, 員工04, 員工05, 員工06, 員工07, 員工08, 員工09, 員工10, 員工11, 員工12, 員工13, 員工14, 員工15, 員工16, 員工17, 員工18, 員工19</textarea>
+            </div>
+            
+            <div class="bg-slate-50 p-4 rounded-lg border flex flex-col justify-between">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-2">⏱️ 每日班別設定 (逗號隔開)</label>
+                    <input id="shiftInput" type="text" class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" value="早班, 中班, 晚班">
+                    <p class="text-xs text-slate-400 mt-1">（註：19人非常充裕，可以應付每日多個班別）</p>
+                </div>
+                <div class="mt-4">
+                    <label class="block font-semibold text-slate-700 mb-2">📅 排班天數</label>
+                    <select id="daysInput" class="w-full border rounded p-2 text-sm bg-white">
+                        <option value="7">排一週 (7天)</option>
+                        <option value="30" selected>排一個月 (30天)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操控按鈕 -->
+        <div class="flex gap-4 mb-6">
+            <button onclick="generateSchedule()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow shadow-indigo-200">
+                ⚡ 開始公平隨機排班
+            </button>
+            <button onclick="downloadExcel()" id="exportBtn" disabled class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg transition-colors shadow">
+                📥 匯出 Excel 試算表 (.xlsx)
+            </button>
+        </div>
+
+        <!-- 預覽區塊 -->
+        <div class="border rounded-lg overflow-hidden bg-slate-50">
+            <div class="bg-slate-200 px-4 py-2 font-semibold text-slate-700 text-sm">🖥️ 班表線上預覽</div>
+            <div class="overflow-x-auto max-h-96">
+                <table class="w-full text-left border-collapse text-sm bg-white">
+                    <thead class="bg-slate-100 sticky top-0 border-b">
+                        <tr id="tableHead"><th class="p-3 text-slate-500 font-medium">尚未產生班表</th></tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y">
+                        <tr><td class="p-8 text-center text-slate-400" id="emptyState">請點擊上方按鈕生成班表</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentScheduleData = []; // 儲存當前排好的資料供 Excel 使用
+
+        function generateSchedule() {
+            // 抓取並清理輸入的資料
+            const emps = document.getElementById('employeeInput').value.split(',').map(s => s.trim()).filter(Boolean);
+            const shifts = document.getElementById('shiftInput').value.split(',').map(s => s.trim()).filter(Boolean);
+            const days = parseInt(document.getElementById('daysInput').value);
+
+            if (emps.length === 0 || shifts.length === 0) {
+                alert("請確保已輸入員工名單與班別！");
+                return;
+            }
+
+            currentScheduleData = [];
+            
+            // 追蹤每位員工的總班數，確保 19 人分擔公平
+            let empStats = {};
+            emps.forEach(e => empStats[e] = 0);
+
+            // 開始逐日排班
+            for (let d = 1; d <= days; d++) {
+                let rowData = { "日期": `第 ${d} 天` };
+                let todayAssigned = new Set();
+
+                shifts.forEach(shift => {
+                    // 篩選出今天還沒排班的員工，並依據「總班數少到多」排序，優先派給班少的人
+                    let availablePool = emps.filter(e => !todayAssigned.has(e));
+                    
+                    if (availablePool.length > 0) {
+                        // 加入些許隨機性防止死板，但以班數少優先（貪婪平均法）
+                        availablePool.sort((a, b) => (empStats[a] - empStats[b]) + (Math.random() - 0.5) * 0.1);
+                        
+                        let chosen = availablePool[0];
+                        rowData[shift] = chosen;
+                        todayAssigned.add(chosen);
+                        empStats[chosen]++; // 該員工總班數增加
+                    } else {
+                        rowData[shift] = "【無人可用】";
+                    }
+                });
+                currentScheduleData.push(rowData);
+            }
+
+            // 渲染前端網頁畫面
+            renderTable(shifts);
+            document.getElementById('exportBtn').disabled = false;
+        }
+
+        function renderTable(shifts) {
+            const head = document.getElementById('tableHead');
+            const body = document.getElementById('tableBody');
+            
+            // 畫表頭
+            let headHtml = `<th class="p-3 text-slate-600 font-bold border-b bg-slate-100">日期</th>`;
+            shifts.forEach(s => headHtml += `<th class="p-3 text-slate-600 font-bold border-b bg-slate-100">${s}</th>`);
+            head.innerHTML = headHtml;
+
+            // 畫內容
+            let bodyHtml = "";
+            currentScheduleData.forEach(row => {
+                bodyHtml += `<tr class="hover:bg-slate-50">`;
+                bodyHtml += `<td class="p-3 font-medium text-slate-900 border-b">${row["日期"]}</td>`;
+                shifts.forEach(s => {
+                    bodyHtml += `<td class="p-3 text-slate-700 border-b">${row[s] || '-'}</td>`;
+                });
+                bodyHtml += `</tr>`;
+            });
+            body.innerHTML = bodyHtml;
+        }
+
+        function downloadExcel() {
+            if (currentScheduleData.length === 0) return;
+            
+            // 呼叫 SheetJS 處理
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(currentScheduleData);
+            
+            // 調整 Excel 欄寬
+            const colWidths = Object.keys(currentScheduleData[0]).map(() => ({ wch: 15 }));
+            ws['!cols'] = colWidths;
+            
+            XLSX.utils.book_append_sheet(wb, ws, "排班結果預覽");
+            XLSX.writeFile(wb, `19人團隊排班表_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+    </script>
+</body>
+</html>
