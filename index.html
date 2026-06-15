@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能自動排班系統 (下拉勾選修正版)</title>
+    <title>智能自動排班系統 (完全修復版)</title>
     <script src="https://tailwindcss.com"></script>
-    <script src="https://jsdelivr.net"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="bg-slate-100 min-h-screen p-6 font-sans">
 
     <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-6">
         <header class="border-b pb-4 mb-6">
-            <h1 class="text-2xl font-bold text-slate-800">📅 智能自動排班系統 (圖形化修正版)</h1>
+            <h1 class="text-2xl font-bold text-slate-800">📅 智能自動排班系統</h1>
             <p class="text-sm text-slate-500 mt-1">選取人員 ➔ 下拉職級 ➔ 勾選班別與休假 ➔ 加入當月名單 ➔ 觸發法規自動排班</p>
         </header>
 
@@ -25,8 +25,27 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">選擇員工名稱</label>
+                        <!-- 修正：直接在 HTML 中塞入 19 人名單，確保無論如何都不會空白 -->
                         <select id="selectName" class="w-full border rounded p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <!-- 由 JavaScript 立即載入 19 人 -->
+                            <option value="馬家恩">馬家恩</option>
+                            <option value="徐琬玲">徐琬玲</option>
+                            <option value="蔡毓暄">蔡毓暄</option>
+                            <option value="高崇恩">高崇恩</option>
+                            <option value="洪瑞國">洪瑞國</option>
+                            <option value="李幸容">李幸容</option>
+                            <option value="陳純瑜">陳純瑜</option>
+                            <option value="蕭雅文">蕭雅文</option>
+                            <option value="鄭力誠">鄭力誠</option>
+                            <option value="陳品蓁">陳品蓁</option>
+                            <option value="謝采蓉">謝采蓉</option>
+                            <option value="陳昱臻">陳昱臻</option>
+                            <option value="游惟婷">游惟婷</option>
+                            <option value="曾浩恩">曾浩恩</option>
+                            <option value="洪宜婷">洪宜婷</option>
+                            <option value="林雨臻">林雨臻</option>
+                            <option value="張毓芳">張毓芳</option>
+                            <option value="丁柔安">丁柔安</option>
+                            <option value="吳柏萱">吳柏萱</option>
                         </select>
                     </div>
                     <div>
@@ -115,31 +134,15 @@
     </div>
 
     <script>
-        // 預設19人名單
         const defaultNames = ["馬家恩", "徐琬玲", "蔡毓暄", "高崇恩", "洪瑞國", "李幸容", "陳純瑜", "蕭雅文", "鄭力誠", "陳品蓁", "謝采蓉", "陳昱臻", "游惟婷", "曾浩恩", "洪宜婷", "林雨臻", "張毓芳", "丁柔安", "吳柏萱"];
         let currentMonthEmployees = []; 
         let excelRows = [];
         let datesArray = [];
         const shiftKeys = ['白班D', '支援班', '晚班E', '大夜班'];
 
-        // 核心修正：改用 DOMContentLoaded 確保網頁結構準備好時，必定百分之百執行注入名單
         document.addEventListener("DOMContentLoaded", function() {
-            initDropdown();
             updateDateCheckboxes();
         });
-
-        // 獨立出初始化選單函數
-        function initDropdown() {
-            const select = document.getElementById('selectName');
-            if (!select) return;
-            select.innerHTML = ''; // 清空
-            defaultNames.forEach(name => {
-                let opt = document.createElement('option');
-                opt.value = name;
-                opt.textContent = name;
-                select.appendChild(opt);
-            });
-        }
 
         function updateDateCheckboxes() {
             const container = document.getElementById('dateCheckboxContainer');
@@ -168,19 +171,3 @@
             if(allowedShifts.length === 0) allowedShifts = [...shiftKeys]; 
 
             let offDays = [];
-            document.querySelectorAll('.day-off-check:checked').forEach(cb => offDays.push(parseInt(cb.value)));
-
-            if(currentMonthEmployees.some(e => e.name === name)) {
-                alert(`「${name}」已存在於當月名單中！`);
-                return;
-            }
-
-            currentMonthEmployees.push({ name, type, allowedShifts, offDays });
-            renderAddedEmployees();
-        }
-
-        function addAllDefaultEmployees() {
-            defaultNames.forEach(name => {
-                if(!currentMonthEmployees.some(e => e.name === name)) {
-                    currentMonthEmployees.push({
-                        name: name,
