@@ -2,166 +2,636 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能自動排班系統 (全面校正版)</title>
-    <script src="https://tailwindcss.com"></script>
-    <script src="https://sheetjs.com"></script>
+    <title>智慧排班系統 - 精準休假與優先調度版</title>
+    <style>
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            flex: 1;
+            min-width: 320px;
+        }
+        .full-width { width: 100%; flex: none; }
+        h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #4a90e2;
+            padding-bottom: 8px;
+        }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
+        select, input[type="month"], input[type="number"] {
+            width: 100%; padding: 10px; box-sizing: border-box;
+            border: 1px solid #ccc; border-radius: 4px; font-size: 16px;
+        }
+        .shift-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .shift-options label {
+            background: #f0f2f5; padding: 10px; text-align: center;
+            border-radius: 4px; cursor: pointer; border: 1px solid #ddd;
+        }
+        .shift-options input[type="radio"] { display: none; }
+        .shift-options input[type="radio"]:checked + label {
+            background: #e3faf2; border-color: #2ec4b6; color: #0ca678;
+        }
+        /* 月曆 */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; margin-top: 10px; }
+        .weekday { font-weight: bold; background: #eee; padding: 5px 0; }
+        .day { padding: 12px 0; background: #fff; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; }
+        .day:hover { background: #e8f4fd; }
+        .day.selected-off { background: #e71d36 !important; color: white; font-weight: bold; }
+        .day.empty { background: #f9f9f9; border: none; cursor: default; }
+        
+        .btn {
+            width: 100%; padding: 12px; background: #4a90e2; color: white;
+            border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px;
+        }
+        .btn:hover { background: #357abd; }
+        .btn-success { background: #2ec4b6; margin-top: 10px; font-size: 18px; padding: 15px; }
+        .btn-success:hover { background: #25a195; }
+        .btn-excel { background: #1f7246; width: auto; display: inline-block; padding: 10px 20px; font-size: 15px; margin-top: 10px;}
+        .btn-excel:hover { background: #165232; }
+        
+        /* 表格與課表 */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 14px; }
+        th { background: #f0f2f5; }
+        .badge {
+            padding: 2px 5px; border-radius: 3px; font-size: 12px;
+            font-weight: bold; background: #ffe3e3; color: #c92a2a; margin-right: 3px; display: inline-block;
+        }
+        
+        /* 班別色彩 */
+        .cell-白班 { background-color: #e7f5ff; color: #1c7ed6; font-weight: bold; }
+        .cell-晚班 { background-color: #fff4e6; color: #fd7e14; font-weight: bold; }
+        .cell-大夜班 { background-color: #f3f0ff; color: #7048e8; font-weight: bold; }
+        .cell-支援班 { background-color: #e3faf2; color: #0ca678; font-weight: bold; }
+        .cell-休假 { background-color: #ffe3e3; color: #c92a2a; }
+        
+        .demand-group { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    </style>
 </head>
-<body class="bg-slate-100 min-h-screen p-6 font-sans">
+<body>
 
-    <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-6">
-        <header class="border-b pb-4 mb-6">
-            <h1 class="text-2xl font-bold text-slate-800">📅 智能自動排班系統</h1>
-            <p class="text-sm text-slate-500 mt-1">先選月份 ➔ 設定人員特殊條件 ➔ 加入當月名單 ➔ 觸發法規自動排班</p>
-        </header>
+    <h1 style="text-align: center; color: #2c3e50;">📅 智慧排班系統</h1>
 
-        <!-- 設定與控制區 -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            
-            <!-- 1. 人員設定表單 (拉長至左側兩欄) -->
-            <div class="bg-slate-50 p-4 rounded-lg border lg:col-span-2">
-                <h3 class="font-bold text-slate-700 mb-3 flex items-center">➕ 步驟一：選擇月份並設定人員特殊條件</h3>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-indigo-700 mb-1">📅 1. 先選擇排班月份</label>
-                        <input id="monthInput" type="month" class="w-full border-2 border-indigo-200 rounded p-2 text-sm bg-white font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" value="2026-06" onchange="updateDateCheckboxes()">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">2. 選擇員工名稱</label>
-                        <select id="selectName" class="w-full border rounded p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="馬家恩">馬家恩</option>
-                            <option value="徐琬玲">徐琬玲</option>
-                            <option value="蔡毓暄">蔡毓暄</option>
-                            <option value="高崇恩">高崇恩</option>
-                            <option value="洪瑞國">洪瑞國</option>
-                            <option value="李幸容">李幸容</option>
-                            <option value="陳純瑜">陳純瑜</option>
-                            <option value="蕭雅文">蕭雅文</option>
-                            <option value="鄭力誠">鄭力誠</option>
-                            <option value="陳品蓁">陳品蓁</option>
-                            <option value="謝采蓉">謝采蓉</option>
-                            <option value="陳昱臻">陳昱臻</option>
-                            <option value="游惟婷">游惟婷</option>
-                            <option value="曾浩恩">曾浩恩</option>
-                            <option value="洪宜婷">洪宜婷</option>
-                            <option value="林雨臻">林雨臻</option>
-                            <option value="張毓芳">張毓芳</option>
-                            <option value="丁柔安">丁柔安</option>
-                            <option value="吳柏萱">吳柏萱</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">3. 職級分類</label>
-                        <select id="selectType" class="w-full border rounded p-2 text-sm bg-white">
-                            <option value="正職">正職</option>
-                            <option value="兼職">兼職</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="mt-4">
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">4. 可值班底資格 (可多選，不勾代表全選)</label>
-                    <div class="flex flex-wrap gap-4 bg-white p-2 border rounded text-sm">
-                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="shift-check font-bold" value="白班D"> ☀️ 白班D</label>
-                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="shift-check font-bold" value="支援班"> 🤝 支援班</label>
-                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="shift-check font-bold" value="晚班E"> 🌙 晚班E</label>
-                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="shift-check font-bold" value="大夜班"> 🦇 大夜班</label>
-                    </div>
-                </div>
-
-                <div class="mt-4">
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">5. 必定休假日期 (可複選，請先選上方月份連動)</label>
-                    <div id="dateCheckboxContainer" class="grid grid-cols-7 gap-1 bg-white p-2 border rounded text-xs max-h-36 overflow-y-auto">
-                        <!-- 由 JavaScript 根據月份動態生成日期勾選鈕 -->
-                    </div>
-                </div>
-
-                <button onclick="addEmployeeToList()" class="mt-4 w-full bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded text-sm transition-colors shadow">
-                    📥 將此條件員工加入當月排班名單
-                </button>
+    <div class="container">
+        
+        <!-- 左側：人員設定 -->
+        <div class="card">
+            <h2>1. 人員與班別設定</h2>
+            <div class="form-group">
+                <label>選擇月份：</label>
+                <input type="month" id="monthInput" value="2026-07" onchange="drawCalendar()">
             </div>
-            
-            <!-- 2. 右側：各班每日人數設定與參考 -->
-            <div class="bg-slate-50 p-4 rounded-lg border flex flex-col justify-between">
-                <div>
-                    <h3 class="font-bold text-slate-700 mb-3">🎯 每日各班別需滿足人數</h3>
-                    <div class="space-y-2 bg-white p-3 border rounded">
-                        <div class="flex justify-between items-center text-xs"><span>☀️ 白班 D：</span><input id="numD" type="number" class="w-16 border rounded p-1 text-center" value="2"></div>
-                        <div class="flex justify-between items-center text-xs"><span>🤝 支援班：</span><input id="numSup" type="number" class="w-16 border rounded p-1 text-center" value="1"></div>
-                        <div class="flex justify-between items-center text-xs"><span>🌙 晚班 E：</span><input id="numE" type="number" class="w-16 border rounded p-1 text-center" value="1"></div>
-                        <div class="flex justify-between items-center text-xs"><span>🦇 大夜班：</span><input id="numN" type="number" class="w-16 border rounded p-1 text-center" value="1"></div>
-                    </div>
-                </div>
-                
-                <div class="mt-4 bg-white p-2 border rounded text-[11px] text-slate-400 space-y-1">
-                    <span class="font-bold text-slate-600">💡 班別時間參考：</span>
-                    <div>白班D (8-16) ｜ 支援班 (13-21)</div>
-                    <div>晚班E (16-24) ｜ 大夜班 (0-8)</div>
+            <div class="form-group">
+                <label>選擇排班員工：</label>
+                <select id="empSelect">
+                    <option>馬家恩</option><option>徐琬玲</option><option>蔡毓暄</option>
+                    <option>高崇恩</option><option>洪瑞國</option><option>李幸容</option>
+                    <option>陳純瑜</option><option>蕭雅文</option><option>鄭力誠</option>
+                    <option>陳品蓁</option><option>謝采蓉</option><option>陳昱臻</option>
+                    <option>游惟婷</option><option>曾浩恩</option><option>洪宜婷</option>
+                    <option>林雨臻</option><option>張毓芳</option><option>丁柔安</option>
+                    <option>吳柏萱</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>新增該員工當月休假天數：</label>
+                <input type="number" id="offDaysLimitInput" value="8" min="0" max="31">
+            </div>
+            <div class="form-group">
+                <label>選擇該月預設班別：</label>
+                <div class="shift-options">
+                    <input type="radio" id="s1" name="shiftRadio" value="白班" checked>
+                    <label for="s1">☀️ 白班</label>
+                    <input type="radio" id="s2" name="shiftRadio" value="晚班">
+                    <label for="s2">⛅ 晚班</label>
+                    <input type="radio" id="s3" name="shiftRadio" value="大夜班">
+                    <label for="s3">🌙 大夜班</label>
+                    <input type="radio" id="s4" name="shiftRadio" value="支援班">
+                    <label for="s4">🤝 支援班</label>
                 </div>
             </div>
         </div>
 
-        <!-- 當月已加入名單看板 -->
-        <div class="bg-indigo-50/50 p-4 rounded-lg border mb-6">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="font-bold text-indigo-900 text-sm">📋 步驟二：確認當月人員名單 (目前已加入: <span id="listCount" class="text-indigo-600">0</span> 人)</h3>
-                <button onclick="addAllDefaultEmployees()" class="text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700">⚡ 一鍵加入全體19人(預設正職/全資格)</button>
-            </div>
-            <div id="addedEmployeesContainer" class="flex flex-wrap gap-2 text-xs">
-                <span class="text-slate-400">目前暫無人員，請在上表選取加入，或點擊一鍵加入全體。</span>
-            </div>
+        <!-- 右側：點選必定休假 -->
+        <div class="card">
+            <h2>2. 點選必定休假日期</h2>
+            <p style="font-size: 13px; color: #666; margin: 0 0 10px 0;">點擊日期變成 <span style="color:red;font-weight:bold;">紅色</span> 代表當天必休</p>
+            <div id="calendarTitle" style="text-align:center; font-weight:bold; background:#e9ecef; padding:6px; border-radius:4px;"></div>
+            <div class="calendar-grid" id="calGrid"></div>
+            <button class="btn" onclick="addStaff()">確認並加入當月排班名單</button>
         </div>
 
-        <!-- 操控動作按鈕 -->
-        <div class="flex gap-4 mb-6">
-            <button onclick="generateSchedule()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow">
-                ⚡ 步驟三：開始自動排班
-            </button>
-            <button onclick="downloadExcel()" id="exportBtn" disabled class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg transition-colors shadow">
-                📥 匯出 交叉統計 Excel 檔 (.xlsx)
-            </button>
+        <!-- 中間上方：當月預備排班名單 -->
+        <div class="card full-width">
+            <h2>📋 當月預備排班名單 (<span id="tableMonthLabel">2026-07</span>)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">員工姓名</th>
+                        <th style="width: 15%;">預設班別</th>
+                        <th style="width: 15%;">要求總休假天數</th>
+                        <th style="width: 40%;">必定休假日期</th>
+                        <th style="width: 10%;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="todoTableBody">
+                    <tr><td colspan="5" style="text-align: center; color: #999;">目前沒有資料，請從上方新增。</td></tr>
+                </tbody>
+            </table>
         </div>
 
-        <!-- 預覽區塊 -->
-        <div class="border rounded-lg overflow-hidden bg-slate-50">
-            <div class="bg-slate-200 px-4 py-2 font-semibold text-slate-700 text-sm">🖥️ 班表與統計線上預覽</div>
-            <div class="overflow-x-auto max-h-[500px]">
-                <table class="w-full text-left border-collapse text-xs bg-white">
-                    <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm" id="tableHead"></thead>
-                    <tbody id="tableBody" class="divide-y">
-                        <tr><td class="p-8 text-center text-slate-400" id="emptyState">請點擊上方按鈕生成班表</td></tr>
-                    </tbody>
+        <!-- 中間下方：當月每日最低人數需求設定 -->
+        <div class="card full-width">
+            <h2>3. 當月每日班別【最低人數需求】設定 (排班人數最少不可低於此設定)</h2>
+            <div class="demand-group">
+                <div class="form-group">
+                    <label>☀️ 白班每日【最低】人數：</label>
+                    <input type="number" id="req_白班" value="3" min="0">
+                </div>
+                <div class="form-group">
+                    <label>⛅ 晚班每日【最低】人數：</label>
+                    <input type="number" id="req_晚班" value="2" min="0">
+                </div>
+                <div class="form-group">
+                    <label>🌙 大夜班每日【最低】人數：</label>
+                    <input type="number" id="req_大夜班" value="1" min="0">
+                </div>
+                <div class="form-group">
+                    <label>🤝 支援班每日【最低】人數：</label>
+                    <input type="number" id="req_支援班" value="0" min="0">
+                </div>
+            </div>
+            <button class="btn btn-success" onclick="runAutoSchedule()">⚡ 依條件執行自動排班</button>
+        </div>
+
+        <!-- 最下方：自動排班結果課表 -->
+        <div class="card full-width" id="resultCard" style="display:none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #4a90e2; padding-bottom: 8px;">
+                <h2 style="border:none; margin:0; padding:0;">📊 最終排班課表結果 (X軸：日期 / Y軸：員工名稱)</h2>
+                <button class="btn btn-excel" onclick="exportToExcel()">📥 匯出成 EXCEL 檔</button>
+            </div>
+            <div style="overflow-x: auto; margin-top: 15px;">
+                <table id="resultTable">
+                    <!-- 由 JavaScript 生成 -->
                 </table>
             </div>
         </div>
+
     </div>
 
     <script>
-        const defaultNames = ["馬家恩", "徐琬玲", "蔡毓暄", "高崇恩", "洪瑞國", "李幸容", "陳純瑜", "蕭雅文", "鄭力誠", "陳品蓁", "謝采蓉", "陳昱臻", "游惟婷", "曾浩恩", "洪宜婷", "林雨臻", "張毓芳", "丁柔安", "吳柏萱"];
-        let currentMonthEmployees = []; 
-        let excelRows = [];
-        let datesArray = [];
-        const shiftKeys = ['白班D', '支援班', '晚班E', '大夜班'];
+        var allSchedules = [];
+        var currentOffDays = [];
 
-        // 雙重保險初始化，確保無論瀏覽器加載速度如何，都能立刻畫出日期格子
-        if (document.readyState !== 'loading') {
-            updateDateCheckboxes();
-        } else {
-            document.addEventListener("DOMContentLoaded", updateDateCheckboxes);
+        drawCalendar();
+
+        function drawCalendar() {
+            var mVal = document.getElementById('monthInput').value;
+            if(!mVal) return;
+
+            var parts = mVal.split('-');
+            var year = parseInt(parts[0], 10);
+            var month = parseInt(parts[1], 10);
+            document.getElementById('calendarTitle').innerText = year + " 年 " + month + " 月";
+            document.getElementById('tableMonthLabel').innerText = mVal;
+
+            currentOffDays = [];
+            var grid = document.getElementById('calGrid');
+            grid.innerHTML = ''; 
+
+            var weekdays = ['日','一','二','三','四','五','六'];
+            for(var i=0; i<weekdays.length; i++) {
+                var wDiv = document.createElement('div');
+                wDiv.className = 'weekday';
+                wDiv.innerText = weekdays[i];
+                grid.appendChild(wDiv);
+            }
+
+            var firstDay = new Date(year, month - 1, 1).getDay();
+            var totalDays = new Date(year, month, 0).getDate();
+
+            for(var j=0; j<firstDay; j++) {
+                var empDiv = document.createElement('div');
+                empDiv.className = 'day empty';
+                grid.appendChild(empDiv);
+            }
+
+            for(var day=1; day<=totalDays; day++) {
+                var dDiv = document.createElement('div');
+                dDiv.className = 'day';
+                dDiv.innerText = day;
+                dDiv.setAttribute('data-day', day);
+                
+                dDiv.onclick = function() {
+                    var clickDay = parseInt(this.getAttribute('data-day'), 10);
+                    var idx = currentOffDays.indexOf(clickDay);
+                    if(idx > -1) {
+                        currentOffDays.splice(idx, 1);
+                        this.classList.remove('selected-off');
+                    } else {
+                        currentOffDays.push(clickDay);
+                        this.classList.add('selected-off');
+                    }
+                };
+                grid.appendChild(dDiv);
+            }
+            refreshTable();
         }
 
-        function updateDateCheckboxes() {
-            const container = document.getElementById('dateCheckboxContainer');
-            if (!container) return;
-            container.innerHTML = '';
-            const monthInput = document.getElementById('monthInput');
-            if (!monthInput || !monthInput.value) return;
+        function addStaff() {
+            var currentMonth = document.getElementById('monthInput').value;
+            var name = document.getElementById('empSelect').value;
+            var shift = document.querySelector('input[name="shiftRadio"]:checked').value;
+            var offLimit = parseInt(document.getElementById('offDaysLimitInput').value, 10) || 0;
+
+            if(currentOffDays.length > offLimit) {
+                alert("錯誤：點選的必定休假天數 (" + currentOffDays.length + "天) 已超過設定的總休假天數 (" + offLimit + "天)！");
+                return;
+            }
+
+            for(var i=0; i<allSchedules.length; i++) {
+                if(allSchedules[i].month === currentMonth && allSchedules[i].name === name) {
+                    alert(name + " 已經在 " + currentMonth + " 的名單中囉！");
+                    return;
+                }
+            }
+
+            currentOffDays.sort(function(a, b){return a - b});
+
+            var newRecord = {
+                month: currentMonth,
+                name: name,
+                shift: shift,
+                offDaysLimit: offLimit,
+                mustOffDays: [].concat(currentOffDays)
+            };
+
+            allSchedules.push(newRecord);
+            alert("成功將 " + name + " 加入預備排班名單！");
+            drawCalendar(); 
+        }
+
+        function refreshTable() {
+            var tbody = document.getElementById('todoTableBody');
+            var currentMonth = document.getElementById('monthInput').value;
             
-            const [year, month] = monthInput.value.split('-').map(Number);
-            const totalDays = new Date(year, month, 0).getDate();
+            var matchedData = [];
+            for(var i=0; i<allSchedules.length; i++) {
+                if(allSchedules[i].month === currentMonth) {
+                    matchedData.push(allSchedules[i]);
+                }
+            }
+
+            if(matchedData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">目前此月份暫無排班資料。</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            for(var j=0; j<matchedData.length; j++) {
+                var item = matchedData[j];
+                var tr = document.createElement('tr');
+
+                var offHtml = '';
+                if(item.mustOffDays.length > 0) {
+                    for(var k=0; k<item.mustOffDays.length; k++) {
+                        offHtml += '<span class="badge">' + item.mustOffDays[k] + '號</span>';
+                    }
+                } else {
+                    offHtml = '<span style="color:#aaa;">未設定必休</span>';
+                }
+
+                tr.innerHTML = '<td><strong>' + item.name + '</strong></td>' +
+                               '<td>' + item.shift + '</td>' +
+                               '<td>' + item.offDaysLimit + ' 天</td>' +
+                               '<td>' + offHtml + '</td>' +
+                               '<td><button onclick="deleteRow(\'' + item.month + '\',\'' + item.name + '\')" style="color:red; cursor:pointer; background:none; border:none; font-weight:bold;">刪除</button></td>';
+                tbody.appendChild(tr);
+            }
+        }
+
+        function deleteRow(month, name) {
+            if(confirm("確定要刪除 " + name + " 的設定嗎？")) {
+                var temp = [];
+                for(var i=0; i<allSchedules.length; i++) {
+                    if(!(allSchedules[i].month === month && allSchedules[i].name === name)) {
+                        temp.push(allSchedules[i]);
+                    }
+                }
+                allSchedules = temp;
+                refreshTable();
+            }
+        }
+
+        /* ==================== 升級優化版：精準休假與新調度權重引擎 ==================== */
+        function runAutoSchedule() {
+            var mVal = document.getElementById('monthInput').value;
+            var parts = mVal.split('-');
+            var year = parseInt(parts[0], 10);
+            var month = parseInt(parts[1], 10);
+            var totalDays = new Date(year, month, 0).getDate();
+
+            var staffs = [];
+            for(var i=0; i<allSchedules.length; i++) {
+                if(allSchedules[i].month === mVal) {
+                    staffs.push({
+                        name: allSchedules[i].name,
+                        preferredShift: allSchedules[i].shift,
+                        offDaysLimit: allSchedules[i].offDaysLimit, // 必須剛好滿足這個休假天數
+                        mustOffDays: allSchedules[i].mustOffDays,
+                        assignedOffCount: 0,
+                        history: {} 
+                    });
+                }
+            }
+
+            if(staffs.length === 0) {
+                alert("請先新增員工至當月預備排班名單！");
+                return;
+            }
+
+            var minDemands = {
+                '白班': parseInt(document.getElementById('req_白班').value, 10) || 0,
+                '晚班': parseInt(document.getElementById('req_晚班').value, 10) || 0,
+                '大夜班': parseInt(document.getElementById('req_大夜班').value, 10) || 0,
+                '支援班': parseInt(document.getElementById('req_支援班').value, 10) || 0
+            };
+
+            // 1. 初始化：先填入「必定休假日」並扣減額度
+            for(var d=1; d<=totalDays; d++) {
+                staffs.forEach(function(s) {
+                    if(s.mustOffDays.indexOf(d) > -1) {
+                        s.history[d] = '休假';
+                        s.assignedOffCount++;
+                    }
+                });
+            }
+
+            // 2. 核心排班階段：逐日、逐班分配最低需求
+            var mainShifts = ['大夜班', '晚班', '白班', '支援班'];
+
+            for(var day=1; day<=totalDays; day++) {
+                var dayRequirements = { 
+                    '白班': minDemands['白班'], 
+                    '晚班': minDemands['晚班'], 
+                    '大夜班': minDemands['大夜班'], 
+                    '支援班': minDemands['支援班'] 
+                };
+
+                // 【步驟 A】滿足各班別的首選志願
+                mainShifts.forEach(function(shiftName) {
+                    var needed = dayRequirements[shiftName];
+                    if(needed <= 0) return;
+
+                    var candidates = staffs.filter(function(s) {
+                        if(s.history[day]) return false; // 已被排工作或必休
+                        if(s.preferredShift !== shiftName) return false; // 必須符合首選
+                        if(s.assignedOffCount >= s.offDaysLimit) return true; // 已休滿的人可以上班
+                        // 尚未休滿的人，除非今天不排會導致工作天不夠，否則留點額度
+                        return true; 
+                    });
+
+                    // 依勞基法過濾
+                    candidates = candidates.filter(function(s) {
+                        return checkLaborLaw(s, day, shiftName);
+                    });
+
+                    for(var c=0; c<candidates.length && dayRequirements[shiftName] > 0; c++) {
+                        candidates[c].history[day] = shiftName;
+                        dayRequirements[shiftName]--;
+                    }
+                });
+
+                // 【步驟 B：新調度規則】白、晚、大夜若未達最低人數，啟動權重調度
+                var coreShifts = ['大夜班', '晚班', '白班'];
+                coreShifts.forEach(function(shiftName) {
+                    if (dayRequirements[shiftName] <= 0) return;
+
+                    // 優先權 1：從「另外兩個正規班別」抽調
+                    var otherCoreShifts = coreShifts.filter(function(x) { return x !== shiftName; });
+                    var coreBackup = staffs.filter(function(s) {
+                        if(s.history[day]) return false; 
+                        if(otherCoreShifts.indexOf(s.preferredShift) === -1) return false; // 首選是另外兩個主要班的人
+                        return checkLaborLaw(s, day, shiftName);
+                    });
+
+                    for(var cb=0; cb<coreBackup.length && dayRequirements[shiftName] > 0; cb++) {
+                        coreBackup[cb].history[day] = shiftName;
+                        dayRequirements[shiftName]--;
+                    }
+
+                    // 優先權 2：正規班調度完還是不夠，才從「支援班」名單中挑選加入
+                    if (dayRequirements[shiftName] > 0) {
+                        var supportBackup = staffs.filter(function(s) {
+                            if(s.history[day]) return false;
+                            if(s.preferredShift !== '支援班') return false; // 首選是支援班的人
+                            return checkLaborLaw(s, day, shiftName);
+                        });
+
+                        for(var sb=0; sb<supportBackup.length && dayRequirements[shiftName] > 0; sb++) {
+                            supportBackup[sb].history[day] = shiftName;
+                            dayRequirements[shiftName]--;
+                        }
+                    }
+                });
+
+                // 【步驟 C】補足剩下的支援班最低人數需求
+                if(dayRequirements['支援班'] > 0) {
+                    var remainSupport = staffs.filter(function(s) {
+                        if(s.history[day]) return false;
+                        return checkLaborLaw(s, day, '支援班');
+                    });
+                    for(var r=0; r<remainSupport.length && dayRequirements['支援班'] > 0; r++) {
+                        remainSupport[r].history[day] = '支援班';
+                        dayRequirements['支援班']--;
+                    }
+                }
+            }
+
+            // 3. 後製微調階段：【嚴格執行必須剛好滿足休假天數】
+            // 第一步：先把尚未放滿應放假天數的人，從「支援班 -> 白班 -> 晚班 -> 大夜班」依序抽掉改為「休假」
+            staffs.forEach(function(s) {
+                var orderToOff = ['支援班', '白班', '晚班', '大夜班'];
+                for(var o=0; o<orderToOff.length; o++) {
+                    var targetShift = orderToOff[o];
+                    for(var d=1; d<=totalDays; d++) {
+                        if(s.assignedOffCount < s.offDaysLimit) {
+                            // 排除必定休假，如果今天上的是目標班別，強轉為休假
+                            if(s.history[d] === targetShift && s.mustOffDays.indexOf(d) === -1) {
+                                s.history[d] = '休假';
+                                s.assignedOffCount++;
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 第二步：萬一有人「必定休假」點太多，或者排完發現實休超過了應休天數（很少發生，除非設定衝突）
+            // 將多出來的休假在符合勞基法下填回工作班
+            staffs.forEach(function(s) {
+                if(s.assignedOffCount > s.offDaysLimit) {
+                    for(var d=1; d<=totalDays; d++) {
+                        if(s.assignedOffCount > s.offDaysLimit && s.history[d] === '休假' && s.mustOffDays.indexOf(d) === -1) {
+                            if(checkLaborLaw(s, d, s.preferredShift)) {
+                                s.history[d] = s.preferredShift;
+                                s.assignedOffCount--;
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 4. 統計各班別最低人數是否達成，若未達成給予主動提示
+            var errorReport = [];
+            for(var d=1; d<=totalDays; d++) {
+                var dayCounts = { '白班': 0, '晚班': 0, '大夜班': 0, '支援班': 0 };
+                staffs.forEach(function(s) {
+                    if(dayCounts[s.history[d]] !== undefined) {
+                        dayCounts[s.history[d]]++;
+                    }
+                });
+                
+                mainShifts.forEach(function(sh) {
+                    if(dayCounts[sh] < minDemands[sh]) {
+                        errorReport.push(d + "日[" + sh + "]還差 " + (minDemands[sh] - dayCounts[sh]) + " 人");
+                    }
+                });
+            }
+
+            if(errorReport.length > 0) {
+                alert("📢 排班提示：由於總人手限制或勞基法衝突，以下日子未能完全滿足最低人數，系統已盡最大可能派班：\n" + errorReport.slice(0, 5).join("\n") + (errorReport.length > 5 ? "\n...等更多天" : ""));
+            }
+
+            // 渲染報表表格
+            renderResultGrid(staffs, totalDays);
+        }
+
+        // 勞基法驗證小助手
+        function checkLaborLaw(s, day, targetShift) {
+            // 規則 1：不得連續上班超過 5 天
+            var continuousWork = 0;
+            for(var h=day-1; h>=1; h--) {
+                if(s.history[h] && s.history[h] !== '休假') {
+                    continuousWork++;
+                } else {
+                    break;
+                }
+            }
+            if(continuousWork >= 5) return false;
+
+            // 規則 2：兩班間隔 11 小時（大夜不能接隔天白/支援；晚班不能接隔天白班）
+            if(day > 1) {
+                var prevShift = s.history[day-1];
+                if(prevShift === '大夜班' && (targetShift === '白班' || targetShift === '支援班')) return false;
+                if(prevShift === '晚班' && targetShift === '白班') return false;
+            }
+            return true;
+        }
+
+        // 產出二維表格
+        function renderResultGrid(staffs, totalDays) {
+            var card = document.getElementById('resultCard');
+            var table = document.getElementById('resultTable');
+            card.style.display = 'block';
+            table.innerHTML = '';
+
+            var thead = document.createElement('thead');
+            var trHead = document.createElement('tr');
+            var thEmp = document.createElement('th');
+            thEmp.innerText = '員工 / 日期';
+            trHead.appendChild(thEmp);
+
+            for(var d=1; d<=totalDays; d++) {
+                var thDay = document.createElement('th');
+                thDay.innerText = d + '日';
+                trHead.appendChild(thDay);
+            }
+            var thSummary = document.createElement('th');
+            thSummary.innerText = '實休 / 應休';
+            trHead.appendChild(thSummary);
+            thead.appendChild(trHead);
+            table.appendChild(thead);
+
+            var tbody = document.createElement('tbody');
+            staffs.forEach(function(s) {
+                var tr = document.createElement('tr');
+                var tdName = document.createElement('td');
+                tdName.innerHTML = '<strong>' + s.name + '</strong><br><small style="color:#777">(' + s.preferredShift + ')</small>';
+                tr.appendChild(tdName);
+
+                for(var d=1; d<=totalDays; d++) {
+                    var tdCell = document.createElement('td');
+                    var status = s.history[d] || '休假';
+                    tdCell.innerText = status;
+                    tdCell.className = 'cell-' + status;
+                    tr.appendChild(tdCell);
+                }
+
+                var tdSum = document.createElement('td');
+                tdSum.innerText = s.assignedOffCount + ' / ' + s.offDaysLimit + '天';
+                // 檢查是否精準剛好滿足
+                if (s.assignedOffCount === s.offDaysLimit) {
+                    tdSum.style.color = 'green';
+                } else {
+                    tdSum.style.color = 'blue'; // 表示有特殊必休衝突
+                }
+                tdSum.style.fontWeight = 'bold';
+                tr.appendChild(tdSum);
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
             
-            for(let d = 1; d <= totalDays; d++) {
-                let div = document.createElement('div');
-                div.className = "flex items-center gap-1 border p-1 bg-white rounded shadow-sm hover:bg-slate-100";
-                div.innerHTML = `
+            window.scrollTo({ top: card.offsetTop, behavior: 'smooth' });
+        }
+
+        /* 網頁純前端匯出至 EXCEL */
+        function exportToExcel() {
+            var table = document.getElementById("resultTable");
+            if (!table) return;
+
+            var csvContent = "\uFEFF"; 
+            var rows = table.querySelectorAll("tr");
+            
+            rows.forEach(function(row) {
+                var rowData = [];
+                var cols = row.querySelectorAll("th, td");
+                
+                cols.forEach(function(col) {
+                    var text = col.innerText.replace(/\n/g, " ");
+                    rowData.push('"' + text + '"');
+                });
+                
+                csvContent += rowData.join(",") + "\r\n";
+            });
+
+            var mVal = document.getElementById('monthInput').value;
+            var blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            var link = document.createElement("a");
+            var url = URL.createObjectURL(blob);
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", "排班結果表_" + mVal + ".csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
